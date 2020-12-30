@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using SFB;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,6 +10,7 @@ public class run : MonoBehaviour
     
     public GameObject prefab_ac;
     public Slider timeNumberSlider;
+    public GameObject plane;
     
     // Start is called before the first frame update
     private Dictionary<int, Dictionary<string, Dictionary<string, float>>> dataDict;
@@ -17,29 +19,25 @@ public class run : MonoBehaviour
     private List<GameObject> acObjectList = new List<GameObject>();
     void Start()
     {
+        Debug.Log("start method reached");
         var fileFilterExtensions = new []
         {
             new ExtensionFilter("txt", "txt"),
         };
+        Debug.Log("init file extensions filter");
         string esSecnarioTextFilepath = StandaloneFileBrowser.OpenFilePanel("Open Euroscope Secnario File", "", fileFilterExtensions, false)[0];
-        Debug.Log(esSecnarioTextFilepath.ToString());
-        DataFeeder feeder = new DataFeeder(esSecnarioTextFilepath.ToString()); 
-        dataDict = feeder.acDataDict;
-        int maxTimeNumber = feeder.maxTimeNumber;
-
+        DataFeeder feeder = new DataFeeder(esSecnarioTextFilepath);
+        
+        dataDict = feeder._AcDataDict;
+        int maxTimeNumber = feeder._MaxTimeNumber;
+        
+        // calculate size of plane
+        float deltaLat = feeder._DeltaLat;
+        float deltaLon = feeder._DeltaLon;
+        plane.transform.localScale = new Vector3(deltaLat, 100, deltaLon);
+        
         timeNumberSlider.maxValue = maxTimeNumber;
         timeNumberSlider.value = 0;
-        
-        // // create from prefab
-        // var acDataDict = dataDict[0];
-        // foreach (var acEntry in acDataDict)
-        // {
-        //     var acEntryValue = acEntry.Value;
-        //     GameObject aircraft = Instantiate(prefab_ac, new Vector3(acEntryValue["latitude"], acEntryValue["altitude"], acEntryValue["longitude"]),
-        //         Quaternion.identity);
-        //     aircraft.name = acEntry.Key;
-        // }
-        
     }
 
     // Update is called once per frame

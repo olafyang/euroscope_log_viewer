@@ -5,8 +5,10 @@ using System.Text.RegularExpressions;
 using UnityEngine;
 public class DataFeeder
 {
-    public Dictionary<int, Dictionary<string, Dictionary<string, float>>> acDataDict;
-    public int maxTimeNumber;
+    public Dictionary<int, Dictionary<string, Dictionary<string, float>>> _AcDataDict;
+    public int _MaxTimeNumber;
+    public float _DeltaLat;
+    public float _DeltaLon;
     public DataFeeder(string filePath)
     {
         string rxPattern = @"\[(?<timestamp>.*?)\s.*\].*\n@N:(?<callsign>.*?):(?<squakcode>\d{4}):1:(?<latitude>.*?):(?<longitude>.*?):(?<altitude>\d*?|-\d*?):";
@@ -15,7 +17,7 @@ public class DataFeeder
         Regex rx = new Regex(rxPattern);
         MatchCollection matches = rx.Matches(esSecnarioText);
         
-        // preprocessing for getting center point
+        // preprocessing
         List<string> timestampList = new List<string>();
         List<string> callsignList = new List<string>();
         List<float> latitudeList = new List<float>();
@@ -53,8 +55,8 @@ public class DataFeeder
         float avgLon = longitudeList.Average();
 
         float maxAlt = altitudeList.Max();
-
         
+        // set oob variables
         for (int i=0; i<timestampList.Count; i++)
         {
             latitudeList[i] = (latitudeList[i] - avgLat) * 100;
@@ -62,7 +64,6 @@ public class DataFeeder
             altitudeList[i] = altitudeList[i] / 100;
         }
 
-        // create dict for ac data
         var dataDict = new Dictionary<int, Dictionary<string, Dictionary<string, float>>>();
         for (int i = 0; i<timestampList.Count; i++)
         {
@@ -84,7 +85,6 @@ public class DataFeeder
                         callsignList[i],
                         new Dictionary<string, float>()
                         {
-                            // {"squakcode", matchGroups["squakcode"].Value},
                             {"latitude", latitudeList[i]},
                             {"longitude", longitudeList[i]},
                             {"altitude", altitudeList[i]},
@@ -93,9 +93,12 @@ public class DataFeeder
                 };
             }
         }
-
-        maxTimeNumber = timeNumberList.Max();
-        acDataDict = dataDict;
+        
+        // create dict for ac data
+        _DeltaLat = (maxLat - minLat) * 10;
+        _DeltaLon = (maxLon - minLon) * 10;
+        _MaxTimeNumber = timeNumberList.Max();
+        _AcDataDict = dataDict;
         
     }
 }
