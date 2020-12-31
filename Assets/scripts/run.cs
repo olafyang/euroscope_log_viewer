@@ -1,39 +1,41 @@
-﻿using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+﻿using System;
+using System.Collections.Generic;
 using SFB;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEditor;
 
 public class run : MonoBehaviour
 {
+    private int _scaleFactor = 1000;
     
-    public GameObject prefab_ac;
+    public GameObject _prefabAc;
     public Slider timeNumberSlider;
     public GameObject plane;
     
     // Start is called before the first frame update
-    private Dictionary<int, Dictionary<string, Dictionary<string, float>>> dataDict;
+    private Dictionary<int, Dictionary<string, Dictionary<string, float>>> _dataDict;
 
-
-    private List<GameObject> acObjectList = new List<GameObject>();
+    private float _areaMaxLat;
+    private float _areaMaxLon;
+    private int _maxTimeValue;
     void Start()
     {
-        Debug.Log("start method reached");
         var fileFilterExtensions = new []
         {
             new ExtensionFilter("txt", "txt"),
         };
-        Debug.Log("init file extensions filter");
         string esSecnarioTextFilepath = StandaloneFileBrowser.OpenFilePanel("Open Euroscope Secnario File", "", fileFilterExtensions, false)[0];
-        DataFeeder feeder = new DataFeeder(esSecnarioTextFilepath);
+        DataFeeder feeder = new DataFeeder(esSecnarioTextFilepath, _scaleFactor);
         
-        dataDict = feeder._AcDataDict;
+        _dataDict = feeder._AcDataDict;
         int maxTimeNumber = feeder._MaxTimeNumber;
+        _maxTimeValue = maxTimeNumber;
         
-        // calculate size of plane
+        // set size of plane
         float deltaLat = feeder._DeltaLat;
         float deltaLon = feeder._DeltaLon;
+        _areaMaxLat = feeder._maxLat;
+        _areaMaxLon = feeder._maxLon;
         plane.transform.localScale = new Vector3(deltaLat, 100, deltaLon);
         
         timeNumberSlider.maxValue = maxTimeNumber;
@@ -43,22 +45,48 @@ public class run : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        foreach (var ac in acObjectList)
-        {
-            Destroy(ac);
-        }
-        acObjectList.Clear();
         int currentTimeSelected = (int)timeNumberSlider.value;
+
         
-        var acDataDict = dataDict[currentTimeSelected];
+        var acDataDict = _dataDict[currentTimeSelected];
         foreach (var acEntry in acDataDict)
         {
-            var acEntryValue = acEntry.Value;
-            GameObject aircraft = Instantiate(prefab_ac, new Vector3(acEntryValue["latitude"], acEntryValue["altitude"], acEntryValue["longitude"]),
-                Quaternion.identity);
-            aircraft.name = acEntry.Key;
-            acObjectList.Add(aircraft);
-        }
+            var acCallsign = acEntry.Key;
+            var acLatitude = acEntry.Value["latitude"];
+            var acLongitude = acEntry.Value["longitude"];
+            var acAltitude = acEntry.Value["altitude"];
+            bool isLastAppearance;
+            if (acEntry.Value["isLastAppearance"] == 1)
+            {
+                isLastAppearance = true;
+            }
+            else
+            {
+                isLastAppearance = false;
+            }
 
+            try
+            {
+                var ac = GameObject.Find(acEntry.Key);
+                ac.transform.localPosition = new Vector3(acLatitude, acAltitude, acLongitude);
+
+                if (isLastAppearance)
+                {
+                    Destroy(ac);
+                }
+            }
+            catch (NullReferenceException)
+            {
+                var acEntryValue = acEntry.Value;
+                GameObject ac = Instantiate(_prefabAc, new Vector3(acLatitude, acAltitude, acLongitude),
+                    Quaternion.identity);
+                ac.name = acCallsign;
+                
+                if (isLastAppearance)
+                {
+                    Destroy(ac);
+                }
+            }
+        }
     }
 }
